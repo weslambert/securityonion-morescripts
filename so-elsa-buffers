@@ -9,5 +9,5 @@ HOSTNAME=SO-Server   # Change this to the name of your server/sensor.
 EMAIL=analyst@anlaystdomain.com
 
 if [ $BUFFER_COUNT -gt $THRESHOLD ]; then
-    echo "Buffer count too high!  Number of buffers currently in the queue: $BUFFER_COUNT" | mail -s i"$HOSTNAME: High Number of ELSA Buffers" $EMAIL
+    echo "Buffer count too high!  Number of buffers currently in the queue: $BUFFER_COUNT" | mail -s "$HOSTNAME: High Number of ELSA Buffers" $EMAIL
 fi
