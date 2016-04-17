@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# This script alerts the analyst when the number of ELSA buffers is greater than the defined threshold.  
+# Make sure to mark this script executable (sudo chmod +x so-elsa-buffers) and create a cron job in /etc/cron.d/ to run at a desired interval.
+
+BUFFER_COUNT="$(ls -alt /nsm/elsa/data/elsa/tmp/buffers | wc -l)"    # Retrieve the number of buffers currently in the queue.
+THRESHOLD=20    # Once the number of buffers is greater than this threshold, the script will alert.
+HOSTNAME=SO-Server   # Change this to the name of your server/sensor.
+EMAIL=analyst@anlaystdomain.com
+
+if [ $BUFFER_COUNT -gt $THRESHOLD ]; then
+    echo "Buffer count too high!  Number of buffers currently in the queue: $BUFFER_COUNT" | mail -s i"$HOSTNAME: High Number of ELSA Buffers" $EMAIL
+fi
