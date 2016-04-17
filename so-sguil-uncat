@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# This script is used to check the number of uncategorized alerts in the Sguil database (securityonion_db) and alert (email) if the number of uncategorized alerts exceeds the defined threshold.
+# This script requires a cron job to be created in /etc/cron.d set to execute the script at a desired interval.
+
+UNCAT_CNT=$(sudo mysql -uroot -Dsecurityonion_db --raw --batch -e 'select count(*) from event where status=0' -s)
+EMAIL=analyst@analystdomain.com
+
+if [ $UNCAT_CNT -gt 1500 ]; then 
+    echo "Please categorize some alerts.  The uncategorized alert count is currently at $UNCAT_CNT uncategorized alerts." | mail -s "Uncategorized Alert Count -- Too High ($UNCAT_CNT)" $EMAIL
+fi
