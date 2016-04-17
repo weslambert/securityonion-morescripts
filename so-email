@@ -1,0 +1,270 @@
+#!/bin/bash
+
+banner="========================================================================="
+banner_short="============================"
+header() {
+  printf '%s\n' "$banner" "$*" "$banner"
+}
+header_short() {
+  printf '%s\n' "$banner_short" "$*" "$banner_short"
+}
+
+#Welome
+echo
+header "Welcome to Security Onion Email Configuration!"
+echo -e "Please follow the steps below to configure Security Onion email alerts.\n\n"
+
+read -p "Would you like to continue? [y/N]" response
+case $response in
+        [yY])
+                :
+                ;;
+        *)
+                exit 1
+                ;;
+esac
+
+#Check if mailutils installed.  If not, install it
+if dpkg -l | grep -q -i "mailutils"; then
+        :
+else
+        apt-get install -y mailutils
+fi
+
+#Check if nullmailer is installed.  If not, install it.
+if dpkg -l | grep -q -i "nullmailer"; then
+        :
+else
+        apt-get install -y nullmailer
+fi
+
+echo
+header_short "System Mail Configuration"
+
+#Read and configure nullmailer files
+mailname=$(cat /etc/mailname)
+
+read -p "Do you wish to keep the FROM address set as '$mailname'? [y/N]" response
+case $response in
+        [yY])
+                :
+                ;;
+        *)
+                echo "What would you like to specify for the FROM address? [ENTER]:"
+                read from
+                echo $from > /etc/mailname
+                ;;
+esac
+adminaddr=$(cat /etc/nullmailer/adminaddr)
+read -p "Do you wish to keep the notification address set as '$adminaddr'? [y/N]" response
+case $response in
+        [yY])
+                :
+                ;;
+        *)
+                echo "What would you like to specify for the notification address? [ENTER]:"
+                read nullmail
+                echo $nullmail > /etc/nullmailer/adminaddr
+                ;;
+esac
+
+remotes=$(cat /etc/nullmailer/remotes)
+read -p "Do you wish to keep the mailserver set to '$remotes'? [y/N]" response
+case $response in
+        [yY])
+                :
+                ;;
+        *)
+                echo "What would you like to specify for the mail server? [ENTER]:"
+                read mailserver
+                echo $mailserver > /etc/nullmailer/remotes
+                ;;
+esac
+
+echo
+header_short "Configure Daily Sostat Email"
+
+#Configure daily sostat email
+gethost=$(hostname)
+read -p "Do you wish to configure daily email for sostat output? [y/N]" response
+case $response in
+        [yY])
+                sostat="/etc/cron.d/sostat"
+                rm -f $sostat
+                touch $sostat
+                echo -e "Please note, the hostname in the subject line of the email will be configured based off of your current hostname.\nIf you would like to change this, you can manually edit '/etc/cron.d/sostat'.\n"
+                read -p "Would you like to use '$adminaddr' for the email address (sostat)? [y/N]" response
+                case $response in
+                        [yY])
+                                somail=$adminaddr
+                                ;;
+                        *)
+                                echo "What would you like to configure the email address as (sostat)? [Enter]:"
+                                read somail
+                                ;;
+                esac
+                echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL='$somail'\nHOSTNAME='$gethost'\n\n* * * * * root /usr/bin/sostat 2>&1 | mail -s "$HOSTNAME stats" $EMAIL' > $sostat
+
+                ;;
+        *)
+
+                :
+                ;;
+esac
+
+#Configure Bro Email
+echo
+header_short "Bro Configuration"
+read -p "Would you like to configure email for Bro? [y/N]" response
+echo -e "Please note, Bro will restart after configuration is complete.\n"
+case $response in
+        [yY])
+                read -p "Would you like to use '$adminaddr' as the notification address? [y/N]" response
+
+                case $response in
+                          [yY])
+                                bronotify=$adminaddr
+                                ;;
+                        *)
+                                echo "What would you like to configure the Bro notification address as? [ENTER];"
+                                read bronotify
+                                ;;
+                esac
+                broctl="/opt/bro/etc/broctl.cfg"
+                sed -i "s|^MailTo.*$|MailTo = $bronotify|g" $broctl
+                if  grep -q "sendmail" $broctl;then
+                        sed -i "s|^sendmail.*$|sendmail = /usr/sbin/sendmail|g" $broctl
+                        if grep -q "tracesummary=" $broctl;then
+                                sed -i "s|^tracesummary=.*$|tracesummary=|g" $broctl
+                        else
+                                sed -i '/sendmail/a tracesummary=' $broctl
+                        fi
+                else
+                        sed -i '/MailTo/a\\sendmail = /usr/sbin/sendmail' $broctl
+                fi
+                localbro="/opt/bro/share/bro/site/local.bro"
+                if grep -q -i "email" $localbro;then
+                        :
+                else
+                        echo -e "\n# Bro Notice email configuration\nhook Notice::policy(n: Notice::Info)\n      {       \n      add n\$actions[Notice::ACTION_ALARM];\n    }" >> $localbro
+                fi
+                nsm_sensor_ps-restart --only-bro
+                ;;
+        *)
+                :
+                ;;
+
+esac
+
+#Configure Sguil Email
+echo
+header_short "Sguil Configuration"
+read -p "Would you like to configure Sguil for email alerts? [y/N]" response
+case $response in
+        [y/Y])
+                read -p "Would you like to use '$adminaddr' as the notification address? [y/N]" response
+
+                case $response in
+                        [yY])
+                                sguilnotify=$adminaddr
+                                ;;
+                        *)
+                                echo "What would you like to configure the Sguil notification address as? [ENTER];"
+                                read sguilnotify
+                                ;;
+                esac
+                sguildemail="/etc/nsm/securityonion/sguild.email"
+                        sed -i "s|^set EMAIL_EVENTS.*$|set EMAIL_EVENTS 1|g" $sguildemail
+                        sed -i "s|^set SMTP.*$|set SMTP_SERVER \"$remotes\"|g" $sguildemail
+                        sed -i "s|^set EMAIL_RCPT.*$|set EMAIL_RCPT_TO \"$sguilnotify\"|g" $sguildemail
+                        sed -i "s|^set EMAIL_FROM.*$|set EMAIL_FROM \"$gethost\"|g" $sguildemail
+                        nsm_server_ps-restart
+                ;;
+        *)
+                :
+                ;;
+esac
+
+#Configure OSSEC email
+echo
+header_short "OSSEC Configuration"
+read -p "Would you like to configure OSSEC for email alerts? [y/N]" response
+echo -e "Please note, OSSEC will restart once configuration is complete.\n"
+case $response in
+        [y/Y])
+                read -p "Would you like to use '$adminaddr' as the notification address? [y/N]" response
+
+                case $response in
+                        [yY])
+                                ossec_notify=$adminaddr
+                                ;;
+                        *)
+                                echo "What would you like to configure the OSSEC notification address as? [ENTER];"
+                                read ossec_notify
+                                ;;
+                esac
+                ossecconf="/var/ossec/etc/ossec.conf"
+                if grep -q -i "smtp" $ossecconf;then
+                        sed -i 's/.*email_to.*/     <email_to>\'$ossec_notify'\<\/email_to>/' $ossecconf
+                        sed -i 's/.*smtp_server.*/     <smtp_server>\'$remotes'\<\/smtp_server>/' $ossecconf
+                        sed -i 's/.*email_from.*/     <email_from>\'$gethost'\<\/email_from>/' $ossecconf
+                        sed -i 's/.*email_maxperhour.*/     <email_maxperhour>20<\/email_maxperhour>/' $ossecconf
+                else
+                        sed -i 's/.*email_notification.*/     <email_notification>yes<\/email_notification>/' $ossecconf
+                        sed -i '/.*email_notification.*/ a \     <email_to>\'$ossec_notify'\<\/email_to>' $ossecconf
+                        sed -i '/.*email_to.*/ a \     <smtp_server>\'$remotes'\<\/smtp_server>' $ossecconf
+                        sed -i '/.*smtp_server.*/ a \     <email_from>\ossec@'$gethost'\<\/email_from>' $ossecconf
+                        sed -i '/.*email_from.*/ a \     <email_maxperhour>\100\<\/email_maxperhour>' $ossecconf
+                fi
+                        service ossec-hids-server restart
+                ;;
+        *)
+                :
+                ;;
+esac
+
+#Configure ELSA email
+echo
+header_short "ELSA Configuration"
+read -p "Would you like to configure ELSA for email alerts? [y/N]" response
+case $response in
+        [y/Y])
+                read -p "Would you like to use '$adminaddr' as the notification address? [y/N]" response
+
+                case $response in
+                        [yY])
+                                elsanotify=$adminaddr
+                                echo "What is the ELSA username to which this email address is associated? [ENTER]"
+                                read user
+
+                                echo "What is the ELSA server IP/FQDN for which you wish to alert? [ENTER]"
+                                read server
+                                ;;
+                        *)
+                                echo "What would you like to configure the ELSA notification address as? [ENTER];"
+                                read elsanotify
+
+                                echo "What is the ELSA username to which this email address is associated? [ENTER]"
+                                read user
+
+                                echo "What is the ELSA server IP/FQDN for which you wish to alert? [ENTER]"
+                                read server
+                                ;;
+                esac
+                elsaweb="/etc/elsa_web.conf"
+                mysql -uroot -Dsecurityonion_db -e "update user_info set email='$elsanotify' where username='$user';"
+                sed -i 's/.*base_url.*/   \"base_url: \"https://https:'$server'/elsa-query/\",' $elsaweb
+                #elsaweb="/etc/elsa_web.conf"
+                #        sed -i "s|^set EMAIL_FROM.*$|set EMAIL_FROM \"$gethost\"|g" $elsaweb
+                        service apache2 restart
+                ;;
+        *)
+                :
+                ;;
+esac
+
+echo
+header "----------------------Email Configuration Complete-----------------------"
+echo -e "Configuration is now complete!\n"
+echo -e "If you would like to edit the email configuration manually, please refer to:\n"
+echo -e "https://github.com/Security-Onion-Solutions/security-onion/wiki/Email\n"
