@@ -15,7 +15,8 @@ normal=$(tput sgr0)
 #Welome
 echo
 header "Welcome to Security Onion Email Configuration!"
-echo -e "Please follow the steps below to configure Security Onion email alerts.\n\n"
+echo -e "\nPlease follow the steps below to configure Security Onion email alerts.\n"
+echo -e "${bold}--> Please note, this script will install mailutils and nullmailer if they are not already installed. <--${normal}\n"
 
 read -p "Would you like to continue? [y/N]" response
 case $response in
@@ -157,8 +158,10 @@ case $response in
                 else
                         echo -e "\n# Bro Notice email configuration\nhook Notice::policy(n: Notice::Info)\n      {       \n      add n\$actions[Notice::ACTION_ALARM];\n    }" >> $localbro
                 fi
-#                nsm_sensor_ps-restart --only-bro
-                ;;
+		#echo -e "\n---------------------------------\nPlease wait while configuring...\n---------------------------------"
+		nsm_sensor_ps-restart --only-bro > /dev/null
+		echo -e "\nDone."
+		;;
         *)
                 :
                 ;;
@@ -188,7 +191,9 @@ case $response in
                         sed -i "s|^set SMTP.*$|set SMTP_SERVER \"$remotes\"|g" $sguildemail
                         sed -i "s|^set EMAIL_RCPT.*$|set EMAIL_RCPT_TO \"$sguilnotify\"|g" $sguildemail
                         sed -i "s|^set EMAIL_FROM.*$|set EMAIL_FROM \"$gethost\"|g" $sguildemail
-                        nsm_server_ps-restart
+                        echo -e "\n---------------------------------\nPlease wait while configuring...\n---------------------------------"
+			nsm_server_ps-restart > /dev/null
+			echo -e "\nDone."
                 ;;
         *)
                 :
@@ -206,7 +211,8 @@ case $response in
 
                 case $response in
                         [yY])
-                                ossec_notify=$adminaddr
+                                remotes=$(cat /etc/nullmailer/remotes)
+				ossec_notify=$adminaddr
                                 ;;
                         *)
                                 echo "What would you like to configure the OSSEC notification address as? [ENTER];"
@@ -226,8 +232,10 @@ case $response in
                         sed -i '/.*smtp_server.*/ a \     <email_from>\ossec@'$gethost'\<\/email_from>' $ossecconf
                         sed -i '/.*email_from.*/ a \     <email_maxperhour>\100\<\/email_maxperhour>' $ossecconf
                 fi
-                        service ossec-hids-server restart
-                ;;
+			echo -e "\n---------------------------------\nPlease wait while configuring...\n---------------------------------"
+			service ossec-hids-server restart > /dev/null
+			echo -e "\nDone."
+		;;
         *)
                 :
                 ;;
@@ -245,20 +253,20 @@ case $response in
                 case $response in
                         [yY])
                                 elsanotify=$adminaddr
-                                echo "What is the ELSA username to which this email address is associated? [ENTER]"
+                                echo "What is the ELSA username to which this email address is associated? [ $SUDO_USER? ] [ENTER]"
                                 read user
 
-                                echo "What is the ELSA server IP/FQDN for which you wish to alert? [ENTER]"
+                                echo "What is the ELSA server IP/hostname for which you wish to alert? [ENTER]"
                                 read server
                                 ;;
                         *)
                                 echo "What would you like to configure the ELSA notification address as? [ENTER];"
                                 read elsanotify
 
-                                echo "What is the ELSA username to which this email address is associated? [ENTER]"
+				echo "What is the ELSA username to which this email address is associated? [ $SUDO_USER? ][ENTER]"
                                 read user
 
-                                echo "What is the ELSA server IP/FQDN for which you wish to alert? [ENTER]"
+                                echo "What is the ELSA server IP/hostname for which you wish to alert? [ENTER]"
                                 read server
                                 ;;
                 esac
@@ -266,13 +274,17 @@ case $response in
 		elsaweb="/etc/elsa_web.conf"
 
 		mysql -uroot -Dsecurityonion_db -e "update user_info set email='$elsanotify' where username='$user';"
-                sed -i 's/.*base_url.*/   \"base_url: \"https://https:'$server'/elsa-query/\",' $elsaweb
-
-		elsaweb="/etc/elsa_web.conf"
-
-		sed -i "s|^set EMAIL_FROM.*$|set EMAIL_FROM \"$gethost\"|g" $elsaweb
-		service apache2 restart
-                ;;
+                if grep -q -i "smtp" $elsaweb;then
+			sed -i 's#.*base_url.*#    "base_url": "https://'$server'/elsa-query",#g' $elsaweb
+			sed -i 's#.*smtp_server.*#    "smtp_server": "'$remotes'",#g' $elsaweb	
+		else
+			sed -i '/.*"email".*/ a \    "base_url": "https://'$server'/elsa-query",' $elsaweb
+			sed -i '/.*base_url.*/ a \    "smtp_server": "'$remotes'",' $elsaweb
+		fi
+		echo -e "\n---------------------------------\nPlease wait while configuring...\n---------------------------------"
+		service apache2 restart 2&>1 > /dev/null
+                echo -e "\nDone."
+		;;
         *)
                 :
                 ;;
@@ -280,6 +292,6 @@ esac
 
 echo
 header "----------------------Email Configuration Complete-----------------------"
-echo -e "Configuration is now complete!\n"
+echo -e "\nConfiguration is now complete!\n"
 echo -e "If you would like to edit the email configuration manually, please refer to:\n"
 echo -e "https://github.com/Security-Onion-Solutions/security-onion/wiki/Email\n"
