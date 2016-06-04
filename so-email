@@ -1,5 +1,6 @@
 #!/bin/bash
 
+[ `id -u` -ne 0 ] && echo "This script must be run using sudo!" && exit 1
 banner="========================================================================="
 banner_short="============================"
 header() {
@@ -11,12 +12,16 @@ header_short() {
 
 bold=$(tput bold)
 normal=$(tput sgr0)
+red=$(tput setaf 1)
+blue=$(tput setaf 4)
+yellow=$(tput setaf 3)
+green=$(tput setaf 2)
 
 #Welome
 echo
 header "Welcome to Security Onion Email Configuration!"
 echo -e "\nPlease follow the steps below to configure Security Onion email alerts.\n"
-echo -e "${bold}--> Please note, this script will install mailutils and nullmailer if they are not already installed. <--${normal}\n"
+echo -e "${yellow}Please note, this script will install mailutils and nullmailer if they are not already installed.${normal}\n"
 
 read -p "Would you like to continue? [y/N]" response
 case $response in
@@ -24,7 +29,8 @@ case $response in
                 :
                 ;;
         *)
-                exit 1
+                echo -e "\n${red}Exiting...${normal}\n"
+		exit 1
                 ;;
 esac
 
@@ -32,23 +38,48 @@ esac
 if dpkg -l | grep -q -i "mailutils"; then
         :
 else
-        apt-get install -y mailutils
+        echo -e "\nRequires mailutils..."
+	read -p "Do you wish to continue installing mailutils? [y/N]" response
+	case $response in
+		[yY])
+			echo "Installing mailutils..."
+			apt-get install -y mailutils > /dev/null
+			echo "Done."
+			:
+			;;
+		*)
+			exit 1
+			;;
+	esac
 fi
 
 #Check if nullmailer is installed.  If not, install it.
 if dpkg -l | grep -q -i "nullmailer"; then
         :
 else
-        apt-get install -y nullmailer
+        echo -e "\nRequires nullmailer..."
+	read -p "Do you wish to continue installing mailutils? [y/N]" response
+        case $response in
+                [yY])
+                        echo "Installing nulmailer..."
+                        apt-get install -y nullmailer > /dev/null
+                        echo "Done."
+			:
+                        ;;
+                *)
+                        exit 1
+                        ;;
+        esac
 fi
-
 echo
 header_short "System Mail Configuration"
 
 #Read and configure nullmailer files
 mailname=$(cat /etc/mailname)
 
-read -p "Do you wish to keep the FROM address set as '$mailname'? [y/N]" response
+[ -z $mailname ] && echo -e "\nnullmailer not installed!  Please install using 'apt-get -y nullmailer'.\n"
+
+read -p "Do you wish to keep the FROM address set as '${yellow}$mailname${normal}'? [y/N]" response
 case $response in
         [yY])
                 :
@@ -65,20 +96,20 @@ if [[ $adminaddr = "" ]];then
 	read nullmail
 	echo $nullmail > /etc/nullmailer/adminaddr
 else
-	read -p "Do you wish to keep the notification address set as '$adminaddr'? [y/N]" response
+	read -p "Do you wish to keep the notification address set as '${yellow}$adminaddr${normal}'? [y/N]" response
 	case $response in
 		[yY])
 			:
 			;;
 		*)
-			echo "What would you like to specify for the notification address? [ENTER]:"
+			echo "What would you like to specify for the notification address?"
 			read nullmail
 			echo $nullmail > /etc/nullmailer/adminaddr
 			;;
 	esac
 fi
 remotes=$(cat /etc/nullmailer/remotes)
-read -p "Do you wish to keep the mailserver set to '$remotes'? [y/N]" response
+read -p "Do you wish to keep the mailserver set to '${yellow}$remotes${normal}'? [y/N]" response
 case $response in
         [yY])
                 :
@@ -102,18 +133,18 @@ case $response in
 		sostat="/etc/cron.d/sostat"
                 rm -f $sostat
                 touch $sostat
-                echo -e "\n${bold}--> Please note, the hostname in the subject line of the email will be configured based off of your current hostname. <--\n--> If you would like to change this, you can manually edit '/etc/cron.d/sostat'. <--${normal}\n"
-                read -p "Would you like to use '$adminaddr' for the email address (sostat)? [y/N]" response
+                echo -e "\n${yellow}Please note, the hostname in the subject line of the email will be configured based off of your current hostname.\nIf you would like to change this, you can manually edit '/etc/cron.d/sostat'. ${normal}\n"
+                read -p "Would you like to use '${yellow}$adminaddr${normal}' for the email address? [y/N]" response
                 case $response in
                         [yY])
                                 somail=$adminaddr
                                 ;;
                         *)
-                                echo "What would you like to configure the email address as (sostat)? [Enter]:"
+                                echo "What would you like to configure the email address as? [Enter]:"
                                 read somail
                                 ;;
                 esac
-                echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL='$somail'\nHOSTNAME='$gethost'\n\n* * * * * root /usr/bin/sostat 2>&1 | mail -s "$HOSTNAME stats" $EMAIL' > $sostat
+                echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL='$somail'\nHOSTNAME='$gethost'\n\n01 12 * * * root /usr/bin/sostat 2>&1 | mail -s "$HOSTNAME stats" $EMAIL' > $sostat
 
                 ;;
         *)
@@ -126,10 +157,10 @@ esac
 echo
 header_short "Bro Configuration"
 read -p "Would you like to configure email for Bro? [y/N]" response
-echo -e "\n${bold}--> Please note, Bro will restart after configuration is complete. <--${normal}\n"
 case $response in
         [yY])
-                read -p "Would you like to use '$adminaddr' as the notification address? [y/N]" response
+                echo -e "\n${yellow}Please note, Bro will restart after configuration is complete.${normal}\n"
+		read -p "Would you like to use '${yellow}$adminaddr${normal}' as the notification address? [y/N]" response
 
                 case $response in
                           [yY])
@@ -156,7 +187,7 @@ case $response in
                 if grep -q -i "email" $localbro;then
                         :
                 else
-                        echo -e "\n# Bro Notice email configuration\nhook Notice::policy(n: Notice::Info)\n      {       \n      add n\$actions[Notice::ACTION_ALARM];\n    }" >> $localbro
+                        echo -e "\n# Bro Notice email configuration\nhook Notice::policy(n: Notice::Info)\n		{       \n      add n\$actions[Notice::ACTION_ALARM];\n		}" >> $localbro
                 fi
 		#echo -e "\n---------------------------------\nPlease wait while configuring...\n---------------------------------"
 		nsm_sensor_ps-restart --only-bro > /dev/null
@@ -172,10 +203,10 @@ esac
 echo
 header_short "Sguil Configuration"
 read -p "Would you like to configure Sguil for email alerts? [y/N]" response
-echo -e "\n${bold}--> Please note, sguild will restart when configuration is complete. <--${normal}\n"
 case $response in
         [y/Y])
-                read -p "Would you like to use '$adminaddr' as the notification address? [y/N]" response
+                echo -e "\n${yellow}Please note, sguild will restart when configuration is complete.${normal}\n"
+		read -p "Would you like to use '${yellow}$adminaddr${normal}' as the notification address? [y/N]" response
 
                 case $response in
                         [yY])
@@ -204,10 +235,10 @@ esac
 echo
 header_short "OSSEC Configuration"
 read -p "Would you like to configure OSSEC for email alerts? [y/N]" response
-echo -e "\n${bold}--> Please note, OSSEC will restart once configuration is complete. <--${normal}\n"
 case $response in
         [y/Y])
-                read -p "Would you like to use '$adminaddr' as the notification address? [y/N]" response
+                echo -e "\n${yellow}Please note, OSSEC will restart once configuration is complete.${normal}\n"
+		read -p "Would you like to use '${yellow}$adminaddr${normal}' as the notification address? [y/N]" response
 
                 case $response in
                         [yY])
@@ -245,28 +276,28 @@ esac
 echo
 header_short "ELSA Configuration"
 read -p "Would you like to configure ELSA for email alerts? [y/N]" response
-echo -e "\n${bold}--> Please note, apache2 will restart when configuration is complete. <--${normal}\n"
 case $response in
         [y/Y])
-                read -p "Would you like to use '$adminaddr' as the notification address? [y/N]" response
-
+                echo -e "\n${yellow}Please note, apache2 will restart when configuration is complete.${normal}\n"
+		read -p "Would you like to use '${yellow}$adminaddr${normal}' as the notification address? [y/N]" response
+		getip=$(hostname -I)
                 case $response in
                         [yY])
-                                elsanotify=$adminaddr
-                                echo "What is the ELSA username to which this email address is associated? [ $SUDO_USER? ] [ENTER]"
+				elsanotify=$adminaddr
+                                echo "What is the ELSA username to which this email address is associated? [ ${yellow}$SUDO_USER${normal}? ]"
                                 read user
 
-                                echo "What is the ELSA server IP/hostname for which you wish to alert? [ENTER]"
+                                echo "What is the ELSA server IP/hostname for which you wish to alert? [ ${yellow}$getip${normal}? ]"
                                 read server
                                 ;;
                         *)
-                                echo "What would you like to configure the ELSA notification address as? [ENTER];"
+                                echo "What would you like to configure the ELSA notification address as?"
                                 read elsanotify
 
-				echo "What is the ELSA username to which this email address is associated? [ $SUDO_USER? ][ENTER]"
+				echo "What is the ELSA username to which this email address is associated? [ ${yellow}$SUDO_USER${normal}? ]"
                                 read user
 
-                                echo "What is the ELSA server IP/hostname for which you wish to alert? [ENTER]"
+                                echo "What is the ELSA server IP/hostname for which you wish to alert? [ ${yellow}$getip${normal}?]"
                                 read server
                                 ;;
                 esac
@@ -289,9 +320,8 @@ case $response in
                 :
                 ;;
 esac
-
 echo
 header "----------------------Email Configuration Complete-----------------------"
-echo -e "\nConfiguration is now complete!\n"
+echo -e "${green}\nConfiguration is now complete!${normal}\n"
 echo -e "If you would like to edit the email configuration manually, please refer to:\n"
-echo -e "https://github.com/Security-Onion-Solutions/security-onion/wiki/Email\n"
+echo -e "${green}https://github.com/Security-Onion-Solutions/security-onion/wiki/Email${normal}\n"
