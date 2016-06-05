@@ -3,7 +3,7 @@
 #########################################
 # Variables
 #########################################
-DEBUG="1"
+DEBUG="0"
 # Window title
 HOSTNAME=`hostname`
 IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.0.1" |head -1`
@@ -44,10 +44,10 @@ while [ $FROM_CONFIRMED = "no" ]; do
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Exiting Setup"
         	exit 1
 	else
-        	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring 'FROM' address."
 		if [ -z $FROMADDRESS ]; then 
 			zenity --error --title "$TITLE" --text="Please provide a valid response\!"
 		else
+			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring 'FROM' address."
 			FROM_CONFIRMED="yes"
 		fi
 	fi
@@ -63,11 +63,11 @@ while [ $NOTIFY_CONFIRMED = "no" ]; do
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Exiting Setup"
         	exit 1
 	else
-        	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring notification address."
-		if [ -z $NOTIFYADDRESS ]; then
+		if ! [[ "$NOTIFYADDRESS" == ?*@?*.?* ]]; then
                         zenity --error --title "$TITLE" --text="Please provide a valid response\!"
                 else
-                        NOTIFY_CONFIRMED="yes"
+                        [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring notification address."
+			NOTIFY_CONFIRMED="yes"
                 fi
 	fi
 done
@@ -83,11 +83,11 @@ while [ $MAILSERVER_CONFIRMED = "no" ]; do
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Exiting Setup"
         	exit 1
 	else
-        	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring SMTP server."
-		if [ -z $MAILSERVER ]; then
+		if ! [[ "$MAILSERVER" == ?*.?*.?* ]]; then
                         zenity --error --title "$TITLE" --text="Please provide a valid response\!"
                 else
-                        MAILSERVER_CONFIRMED="yes"
+                        [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring SMTP server."
+			MAILSERVER_CONFIRMED="yes"
                 fi
 	fi
 done
@@ -113,11 +113,11 @@ else
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
 			exit 1
 		else
-			if [ -z $SOSTATADDRESS ]; then
+			if ! [[ "$SOSTATADDRESS" == ?*@?*.?* ]]; then
                         	zenity --error --title "$TITLE" --text="Please provide a valid response\!"
                 	else
-                        	SOSTAT_CONFIRMED="yes"
-                		[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring notification address for sostat email."
+				[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring notification address for sostat."
+				SOSTAT_CONFIRMED="yes"
 			fi
 		fi
 	done
@@ -145,11 +145,11 @@ else
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
 			exit 1 
 		else
-			if [ -z $BROADDRESS ]; then
+			if ! [[ "$BROADDRESS" == ?*@?*.?* ]]; then
         			zenity --error --title "$TITLE" --text="Please provide a valid response\!"
         		else
-        		[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring notification address for Bro."
-			BRO_CONFIRMED="yes"
+				[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring notification address for Bro."
+				BRO_CONFIRMED="yes"
         		fi
 		fi
 	done
@@ -179,7 +179,7 @@ else
 			exit 1
 		else
   
-			if [ -z $SGUILADDRESS ]; then
+			if ! [[ "$SGUILADDRESS" == ?*@?*.?* ]]; then
 				zenity --error --title "$TITLE" --text="Please provide a valid response\!"
 			else
 				[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring notification address for Sguil."
@@ -212,7 +212,7 @@ else
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
 			exit 1
 		else	
-			if [ -z $OSSECADDRESS ]; then
+			if ! [[ "$OSSECADDRESS" == ?*@?*.?* ]]; then
 				zenity --error --title "$TITLE" --text="Please provide a valid response\!"
 			else
 				[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring notification address for OSSEC."
@@ -244,7 +244,7 @@ else
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
 			exit 1
 		else	
-			if [ -z $ELSAADDRESS ]; then
+			if ! [[ "$ELSAADDRESS" == ?*@?*.?* ]]; then
                         	zenity --error --title "$TITLE" --text="Please provide a valid response\!"
                 	else
                         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring notification address for ELSA."
@@ -283,7 +283,7 @@ else
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
 			exit 1
 		else
-			if [ -z $ELSASERVER ]; then
+			if [ -z $ELSASERVER ]; then 
                         	zenity --error --title "$TITLE" --text="Please provide a valid response\!"
                 	else
                         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring ELSA server to alert upon."
@@ -300,7 +300,7 @@ TEXT="The following will be configured for $HOSTNAME:\n\
 <b>System mail server</b>: $MAILSERVER\n\
 <b>Daily sostat</b>: $SOSTATADDRESS\n\
 <b>Bro</b>: $BROADDRESS\n\
-<b>Sguil</b>b: $SGUILADDRESS\n\
+<b>Sguil</b>: $SGUILADDRESS\n\
 <b>OSSEC</b>: $OSSECADDRESS\n\
 <b>ELSA</b>: $ELSAADDRESS\n\
 <b>ELSA username</b>: $ELSAUSER\n\
