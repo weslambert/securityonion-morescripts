@@ -28,7 +28,7 @@ zenity --question --title="$TITLE" --text="$TEXT" --ok-label="$YES" --cancel-lab
 ANSWER="$?"
 if [ $ANSWER -eq 1 ]; then
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Exiting Setup"
-        exit
+        exit 1
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Continuing Setup."
 fi
@@ -141,7 +141,7 @@ else
         BRO_CONFIRMED="no"
 	while [ $BRO_CONFIRMED = "no" ]; do
 		TEXT="Would email address would you like to use for Bro alerts?"
-        	BROADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$SOSTATADDRESS"`
+		BROADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$NOTIFYADDRESS"`
         	ANSWER="$?"
 		if [ $ANSWER -eq 1 ]; then
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
@@ -175,7 +175,7 @@ else
         SGUIL_CONFIRMED="no"
 	while [ $SGUIL_CONFIRMED = "no" ]; do
 		TEXT="Would email address would you like to use for Sguil alerts?"
-        	SGUILADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$BROADDRESS"`
+		SGUILADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$NOTIFYADDRESS"`
         	ANSWER="$?"
 		if [ $ANSWER -eq 1 ]; then
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
@@ -210,7 +210,7 @@ else
         OSSEC_CONFIRMED="no"
 	while [ $OSSEC_CONFIRMED = "no" ]; do
 		TEXT="Would email address would you like to use for OSSEC alerts?"
-        	OSSECADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$SGUILADDRESS"`
+		OSSECADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$NOTIFYADDRESS"`
         	ANSWER="$?"
 		if [ $ANSWER -eq 1 ]; then 
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
@@ -243,7 +243,7 @@ else
         ELSA_EMAIL_CONFIRMED="no"
 	while [ $ELSA_EMAIL_CONFIRMED = "no" ]; do
 		TEXT="Would email address would you like to use for ELSA?"
-        	ELSAADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$OSSECADDRESS"`
+		ELSAADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$NOTIFYADDRESS"`
         	ANSWER="$?"
 		if [ $ANSWER -eq 1 ]; then
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
@@ -356,11 +356,15 @@ echo $MAILSERVER > /etc/nullmailer/remotes
 #Configure sostat
 echo "20"
 echo "# Configuring sostat mail..."
-[ -n "$SOSTATADDRESS" || $SOSTATADDRESS == "Not Configured" ] && SOSTAT="/etc/cron.d/sostat" && touch $SOSTAT && echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL='$NOTIFYADDRESS'\nHOSTNAME='$HOSTNAME'\n\n01 12 * * * root /usr/bin/sostat 2>&1 | mail -s "$HOSTNAME stats" $EMAIL' > $SOSTAT
+if ! [[ "$SOSTATADDRESS" == "Not Configured" ]]; then
+	SOSTAT="/etc/cron.d/sostat"
+	touch $SOSTAT
+	echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL='$NOTIFYADDRESS'\nHOSTNAME='$HOSTNAME'\n\n01 12 * * * root /usr/bin/sostat 2>&1 | mail -s "$HOSTNAME stats" $EMAIL' > $SOSTAT
+fi
 #Configure Bro
 echo "40"
 echo "# Configuring Bro email..."
-if [ -n "$BROADDRESS" || $BROADDRESS == "Not Configured" ]; then
+if ! [[ "$BROADDRESS" == "Not Configured" ]]; then
 	BROCTL="/opt/bro/etc/broctl.cfg"
 	sed -i "s|^MailTo.*$|MailTo = $BROADDRESS|g" $BROCTL
         if  grep -q "sendmail" $BROCTL;then
@@ -386,7 +390,7 @@ fi
 #Configure Sguil
 echo "60"
 echo "# Configuring Sguil email..."
-if [ -n "$SGUILADDRESS" || $SGUILADDRESS == "Not Configured" ]; then
+if ! [[ "$SGUILADDRESS" == "Not Configured" ]]; then
 
 	SGUILDEMAIL="/etc/nsm/securityonion/sguild.email"
 	sed -i "s|^set EMAIL_EVENTS.*$|set EMAIL_EVENTS 1|g" $SGUILDEMAIL
@@ -398,7 +402,7 @@ fi
 #Configure OSSEC
 echo "80"
 echo "# Configuring OSSEC email..."
-if [ -n $OSSECADDRESS || $OSSECADDRESS == "Not Configured" ]; then
+if ! [[ "$OSSECADDRESS" == "Not Configured" ]]; then
 	OSSECCONF="/var/ossec/etc/ossec.conf"
         if grep -q -i "smtp" $OSSECCONF;then
         	sed -i 's/.*email_to.*/     <email_to>\'$OSSECADDRESS'\<\/email_to>/' $OSSECCONF
@@ -417,7 +421,7 @@ fi
 #Configure ELSA
 echo "99"
 echo "# Configuring ELSA email..."
-if [ -n $ELSAADDRESS || $ELSAADDRESS == "Not Configured" ]; then
+if ! [[ "$ELSAADDRESS" == "Not Configured" ]]; then
 	ELSAWEB="/etc/elsa_web.conf"
 	mysql --defaults-file=/etc/mysql/debian.cnf -Dsecurityonion_db -e "update user_info set email='$ELSAADDRESS' where username='$ELSAUSER';"
         if grep -q -i "smtp" $ELSAWEB;then
