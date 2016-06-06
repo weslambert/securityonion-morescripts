@@ -13,7 +13,8 @@ LOG=`mktemp /tmp/soemail.log.XXXXXXXXXX`
 REMOTES=$(cat /etc/nullmailer/remotes)
 ADMINADDR=$(cat /etc/nullmailer/adminaddr)
 FROMADDR=$(cat /etc/mailname)
-#Welcome Screen
+#########################################
+# Welcome Screen
 #########################################
 TEXT="<b>Welcome to Security Onion Email Setup!</b>\n\
 \n\
@@ -32,8 +33,8 @@ if [ $ANSWER -eq 1 ]; then
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Continuing Setup."
 fi
-
-#FROM Address
+#########################################
+#'From' Address
 #########################################
 FROM_CONFIRMED="no"
 while [ $FROM_CONFIRMED = "no" ]; do
@@ -52,7 +53,8 @@ while [ $FROM_CONFIRMED = "no" ]; do
 		fi
 	fi
 done
-#Notification Address
+#########################################
+# Notification Address
 #########################################
 NOTIFY_CONFIRMED="no"
 while [ $NOTIFY_CONFIRMED = "no" ]; do
@@ -71,8 +73,8 @@ while [ $NOTIFY_CONFIRMED = "no" ]; do
                 fi
 	fi
 done
-
-#Mail server
+#########################################
+# Mail server
 #########################################
 MAILSERVER_CONFIRMED="no"
 while [ $MAILSERVER_CONFIRMED = "no" ]; do
@@ -91,7 +93,8 @@ while [ $MAILSERVER_CONFIRMED = "no" ]; do
                 fi
 	fi
 done
-#Sostat email
+#########################################
+# Sostat email
 #########################################
 TEXT="Would you like to configure daily email for sostat output?"
 YES="Yes"
@@ -103,7 +106,8 @@ if [ $ANSWER -eq 1 ]; then
 	SOSTATADDRESS="Not Configured"
 else
         [  $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring sostat email."
-	#Sostat email address
+	#########################################
+	# Sostat email address
 	#########################################
 	SOSTAT_CONFIRMED="no"
 	while [ $SOSTAT_CONFIRMED = "no" ]; do
@@ -123,7 +127,8 @@ else
 		fi
 	done
 fi
-#Bro email
+#########################################
+# Bro email
 #########################################
 TEXT="Would you like to configure email alerts for Bro?"
 YES="Yes"
@@ -135,8 +140,8 @@ if [ $ANSWER -eq 1 ]; then
 	BROADDRESS="Not Configured"
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for Bro."
-
-        #Bro email address
+	#########################################
+        # Bro email address
         #########################################
         BRO_CONFIRMED="no"
 	while [ $BRO_CONFIRMED = "no" ]; do
@@ -156,8 +161,8 @@ else
 		fi
 	done
 fi
-
-#Sguil email
+#########################################
+# Sguil email
 #########################################
 TEXT="Would you like to configure email alerts for Sguil?"
 YES="Yes"
@@ -169,8 +174,8 @@ if [ $ANSWER -eq 1 ]; then
 	SGUILADDRESS="Not Configured"
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for Sguil."
-
-        #Sguil email address
+	#########################################
+        # Sguil email address
         #########################################
         SGUIL_CONFIRMED="no"
 	while [ $SGUIL_CONFIRMED = "no" ]; do
@@ -191,8 +196,8 @@ else
 		fi
 	done 
 fi
-
-#OSSEC email
+#########################################
+# OSSEC email
 #########################################
 TEXT="Would you like to configure email alerts for OSSEC?"
 YES="Yes"
@@ -204,8 +209,8 @@ if [ $ANSWER -eq 1 ]; then
 	OSSECADDRESS="Not Configured"
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for OSSEC."
-
-        #OSSEC email address
+	#########################################
+        # OSSEC email address
         #########################################
         OSSEC_CONFIRMED="no"
 	while [ $OSSEC_CONFIRMED = "no" ]; do
@@ -225,6 +230,7 @@ else
 		fi
 	done
 fi
+#########################################
 #ELSA email
 #########################################
 TEXT="Would you like to configure email alerts for ELSA?"
@@ -237,8 +243,8 @@ if [ $ANSWER -eq 1 ]; then
 	ELSAADDRESS="Not Configured"
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for ELSA."
-
-        #ELSA email address
+	#########################################
+        # ELSA email address
         #########################################
         ELSA_EMAIL_CONFIRMED="no"
 	while [ $ELSA_EMAIL_CONFIRMED = "no" ]; do
@@ -257,8 +263,8 @@ else
                 	fi
 		fi
 	done
-
-	#ELSA usernmae
+	#########################################
+	# ELSA usernmae
         #########################################
         ELSA_USER_CONFIRMED="no"
 	while [ $ELSA_USER_CONFIRMED = "no" ]; do	
@@ -277,7 +283,8 @@ else
                 	fi
 		fi
         done
-	#ELSA server IP/Hostname
+	#########################################
+	# ELSA server IP/Hostname
         #########################################
         ELSASERVER_CONFIRMED="no"
 	while [ $ELSASERVER_CONFIRMED = "no" ]; do	
@@ -301,7 +308,8 @@ if [[ $ELSAADDRESS == "Not Configured" ]]; then
 	ELSAUSER="Not Configured"
 	ELSASERVER="Not Configured"
 fi
-#Summary
+#########################################
+# Summary
 #########################################
 TEXT="The following will be configured for $HOSTNAME:\n\
 \n\<b>System 'From' address</b>: $FROMADDRESS\n\
@@ -436,11 +444,11 @@ if ! [[ "$ELSAADDRESS" == "Not Configured" ]]; then
 fi
 }
 CONFIGURE_EMAIL | zenity --progress --title="$TITLE" --text="Please wait while making changes to the system..." --percentage=0 --auto-close
-
-#Complete
+########################################
+# Setup Complete
+########################################
 TEXT="<b>Security Onion Email Setup is now complete!</b> \n \
 \n \
 If you would like to edit the email configuration manually, please refer to:\n
 https://github.com/Security-Onion-Solutions/security-onion/wiki/Email\n"
 zenity --info --title="$TITLE" --text="$TEXT" --no-wrap
-
