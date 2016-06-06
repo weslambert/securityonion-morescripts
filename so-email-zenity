@@ -328,9 +328,9 @@ else
 fi
 
 #########################################
-# Begin function CONFIGURE_SERVICES
+# Begin function CONFIGURE_EMAIL
 #########################################
-function CONFIGURE_SERVICES() {
+function CONFIGURE_EMAIL() {
 
 #Check if mailutils installed.  If not, install it.
 if dpkg -l | grep -q -i "mailutils"; then
@@ -405,7 +405,8 @@ echo "# Configuring OSSEC email..."
 if ! [[ "$OSSECADDRESS" == "Not Configured" ]]; then
 	OSSECCONF="/var/ossec/etc/ossec.conf"
         if grep -q -i "smtp" $OSSECCONF;then
-        	sed -i 's/.*email_to.*/     <email_to>\'$OSSECADDRESS'\<\/email_to>/' $OSSECCONF
+		sed -i 's/.*email_notification.*/     <email_notification>yes<\/email_notification>/' $OSSECCONF
+		sed -i 's/.*email_to.*/     <email_to>\'$OSSECADDRESS'\<\/email_to>/' $OSSECCONF
                 sed -i 's/.*smtp_server.*/     <smtp_server>\'$MAILSERVER'\<\/smtp_server>/' $OSSECCONF
                 sed -i 's/.*email_from.*/     <email_from>\'$HOSTNAME'\<\/email_from>/' $OSSECCONF
                 sed -i 's/.*email_maxperhour.*/     <email_maxperhour>20<\/email_maxperhour>/' $OSSECCONF
@@ -434,7 +435,7 @@ if ! [[ "$ELSAADDRESS" == "Not Configured" ]]; then
 	service apache2 restart 2&>1 > /dev/null
 fi
 }
-CONFIGURE_SERVICES | zenity --progress --title="$TITLE" --text="Please wait while making changes to the system..." --percentage=0 --auto-close
+CONFIGURE_EMAIL | zenity --progress --title="$TITLE" --text="Please wait while making changes to the system..." --percentage=0 --auto-close
 
 #Complete
 TEXT="<b>Security Onion Email Setup is now complete!</b> \n \
