@@ -362,7 +362,7 @@ echo $NOTIFYADDRESS > /etc/nullmailer/adminaddr
 #Configure system mail server
 echo $MAILSERVER > /etc/nullmailer/remotes
 #Configure sostat
-echo "20"
+echo "15"
 echo "# Configuring sostat mail..."
 if ! [[ "$SOSTATADDRESS" == "Not Configured" ]]; then
 	SOSTAT="/etc/cron.d/sostat"
@@ -370,7 +370,7 @@ if ! [[ "$SOSTATADDRESS" == "Not Configured" ]]; then
 	echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL='$NOTIFYADDRESS'\nHOSTNAME='$HOSTNAME'\n\n01 12 * * * root /usr/bin/sostat 2>&1 | mail -s "$HOSTNAME stats" $EMAIL' > $SOSTAT
 fi
 #Configure Bro
-echo "40"
+echo "30"
 echo "# Configuring Bro email..."
 if ! [[ "$BROADDRESS" == "Not Configured" ]]; then
 	BROCTL="/opt/bro/etc/broctl.cfg"
@@ -396,7 +396,7 @@ if ! [[ "$BROADDRESS" == "Not Configured" ]]; then
 	nsm_sensor_ps-restart --only-bro > /dev/null
 fi
 #Configure Sguil
-echo "60"
+echo "45"
 echo "# Configuring Sguil email..."
 if ! [[ "$SGUILADDRESS" == "Not Configured" ]]; then
 
@@ -408,7 +408,7 @@ if ! [[ "$SGUILADDRESS" == "Not Configured" ]]; then
 	nsm_server_ps-restart > /dev/null
 fi
 #Configure OSSEC
-echo "80"
+echo "60"
 echo "# Configuring OSSEC email..."
 if ! [[ "$OSSECADDRESS" == "Not Configured" ]]; then
 	OSSECCONF="/var/ossec/etc/ossec.conf"
@@ -428,7 +428,7 @@ if ! [[ "$OSSECADDRESS" == "Not Configured" ]]; then
 	service ossec-hids-server restart > /dev/null
 fi
 #Configure ELSA
-echo "99"
+echo "75"
 echo "# Configuring ELSA email..."
 if ! [[ "$ELSAADDRESS" == "Not Configured" ]]; then
 	ELSAWEB="/etc/elsa_web.conf"
