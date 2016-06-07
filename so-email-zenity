@@ -10,9 +10,9 @@ IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.
 TITLE="Security Onion Email Setup ($HOSTNAME)"
 # File locations
 LOG=`mktemp /tmp/soemail.log.XXXXXXXXXX`
-REMOTES=$(cat /etc/nullmailer/remotes)
-ADMINADDR=$(cat /etc/nullmailer/adminaddr)
-FROMADDR=$(cat /etc/mailname)
+[ -f /etc/nullmailer/remotes ] && REMOTES=$(cat /etc/nullmailer/remotes)
+[ -f /etc/nullmailer/adminaddr ] && ADMINADDR=$(cat /etc/nullmailer/adminaddr)
+[ -f /etc/mailname ] && FROMADDR=$(cat /etc/mailname)
 #########################################
 # Welcome Screen
 #########################################
@@ -344,14 +344,14 @@ function CONFIGURE_EMAIL() {
 if dpkg -l | grep -q -i "mailutils"; then
         :
 else
-	apt-get install -y mailutils > /dev/null
+	apt-get install -y mailutils 2&>1 > /dev/null
 fi
 
 #Check if nullmailer is installed.  If not, install it.
 if dpkg -l | grep -q -i "nullmailer"; then
         :
 else
-	apt-get install -y nullmailer > /dev/null
+	apt-get install -y nullmailer 2&>1 > /dev/null
 fi
 echo "10"
 echo "# Configuring system mail..."
