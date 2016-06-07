@@ -344,14 +344,14 @@ function CONFIGURE_EMAIL() {
 if dpkg -l | grep -q -i "mailutils"; then
         :
 else
-	apt-get install -y mailutils 2&>1 > /dev/null
+	apt-get install -y mailutils > /dev/null
 fi
 
 #Check if nullmailer is installed.  If not, install it.
 if dpkg -l | grep -q -i "nullmailer"; then
         :
 else
-	apt-get install -y nullmailer 2&>1 > /dev/null
+	apt-get install -y nullmailer > /dev/null
 fi
 echo "10"
 echo "# Configuring system mail..."
@@ -434,10 +434,11 @@ if ! [[ "$ELSAADDRESS" == "Not Configured" ]]; then
 	ELSAWEB="/etc/elsa_web.conf"
 	mysql --defaults-file=/etc/mysql/debian.cnf -Dsecurityonion_db -e "update user_info set email='$ELSAADDRESS' where username='$ELSAUSER';"
         if grep -q -i "smtp" $ELSAWEB;then
-        	sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
+		sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
                 sed -i 's#.*smtp_server.*#    "smtp_server": "'$MAILSERVER'",#g' $ELSAWEB
         else
-                sed -i '/.*"email".*/ a \    "base_url": "https://'$ELSASERVER'/elsa-query",' $ELSAWEB
+		sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
+		#sed -i '/.*"email".*/ a \    "base_url": "https://'$ELSASERVER'/elsa-query",' $ELSAWEB
                 sed -i '/.*base_url.*/ a \    "smtp_server": "'$MAILSERVER'",' $ELSAWEB
         fi
 	service apache2 restart 2&>1 > /dev/null
