@@ -7,8 +7,8 @@ DEBUG="0"
 HOSTNAME=`hostname`
 IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.0.1" |head -1`
 TITLE="Security Onion Email Setup ($HOSTNAME)"
-#[ -f /etc/postfix/main.cf ] && REMOTE=`grep -o 'relayhost =.*' /etc/postfix/main.cf | cut -f2- -d'='` && FROMADDR=`grep -o 'myhostname =.*' /etc/postfix/main.cf | cut -f2- -d'='`
-#[ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' ' `
+[ -f /etc/postfix/main.cf ] && REMOTE=`grep -o 'relayhost =.*' /etc/postfix/main.cf | cut -f2- -d'='| cut -f2 -d' '` && FROMADDR=`grep -o 'myhostname =.*' /etc/postfix/main.cf | cut -f2- -d'=' | cut -f2 -d' '`
+[ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' '`
 #########################################
 # Welcome Screen
 #########################################
@@ -16,7 +16,7 @@ TEXT="<b>Welcome to Security Onion Email Setup!</b>\n\
 \n\
 This program will allow you to configure email for Security Onion on $HOSTNAME.\n\
 \n\
-Please note, this script will install mailutils and nullmailer if they are not already installed.
+Please note, this script will install mailutils if it is not already installed.
 \n\
 Would you like to continue?"
 YES="Yes, Continue!"
@@ -313,14 +313,9 @@ fi
 # Summary
 #########################################
 TEXT="The following will be configured for $HOSTNAME:\n\
-\n\<b>System 'From' address</b>: $FROMADDRESS\n\
-<b>System notification</b>: $NOTIFYADDRESS\n\
-<b>System mail server</b>: $MAILSERVER\n\
-<b>Daily sostat</b>: $SOSTATADDRESS\n\
-<b>Bro</b>: $BROADDRESS\n\
-<b>Sguil</b>: $SGUILADDRESS\n\
-<b>OSSEC</b>: $OSSECADDRESS\n\
-<b>ELSA</b>: $ELSAADDRESS\n\
+\n\<b>'From' address</b>: $FROMADDRESS\n\
+<b>Notification address</b>: $NOTIFYADDRESS\n\
+<b>Mail server</b>: $MAILSERVER\n\
 <b>ELSA username</b>: $ELSAUSER\n\
 <b>ELSA server</b>: $ELSASERVER\n\
 \n\Please note, services will restart upon confirmation.
@@ -436,6 +431,7 @@ if ! [[ "$ELSAADDRESS" == "Not Configured" ]]; then
 	ELSAWEB="/etc/elsa_web.conf"
 	mysql --defaults-file=/etc/mysql/debian.cnf -Dsecurityonion_db -e "update user_info set email='$ELSAADDRESS' where username='$ELSAUSER';"
         if grep -q -i "smtp" $ELSAWEB;then
+		sed -i 's#.*display_address.*#    "display_address": "noreply@'$HOSTNAME'",#g' $ELSAWEB
 		sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
                 sed -i 's#.*smtp_server.*#    "smtp_server": "localhost"#g' $ELSAWEB
         else
