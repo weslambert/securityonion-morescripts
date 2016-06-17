@@ -12,7 +12,7 @@ if [ -f /etc/postfix/main.cf ];then
 	FROMADDR=`grep -o 'myhostname =.*' /etc/postfix/main.cf | cut -f2- -d'=' | cut -f2 -d' '`
 else
 	REMOTE=''
-	FROMADDR=$HOSTNAME
+	FROMADDR="no-reply@"$HOSTNAME
 fi 
 [ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' '`
 SOSTATSUMMARY="Not Configured"
@@ -118,7 +118,7 @@ else
 	SOSTATADDRESS="root@localhost"
 	SOSTATSUMMARY="Configured"
 fi
-TEXT="Which type of deployement are you currently running?"
+TEXT="Which type of deployment are you currently running?"
 COMPONENTS=`zenity --height=300 --list --radiolist --column="1" --column="2" --hide-header --title="$TITLE" --text="$TEXT" TRUE Server FALSE Sensor FALSE Standalone`
 
 case $COMPONENTS in
