@@ -316,11 +316,12 @@ if ! [[ "$BROSUMMARY" == "Not Configured" ]]; then
         	sed -i "s|^sendmail.*$|sendmail = /usr/sbin/sendmail|g" $BROCTL
                 if grep -q "tracesummary=" $BROCTL;then
                 	sed -i "s|^tracesummary=.*$|tracesummary=|g" $BROCTL
-                else
-                	sed -i '/sendmail/a tracesummary=' $BROCTL
+		else
+			sed -i '/sendmail/a tracesummary=' $BROCTL
                 fi
         else
         	sed -i '/MailTo/a\\sendmail = /usr/sbin/sendmail' $BROCTL
+		sed -i '/sendmail/a tracesummary=' $BROCTL
         fi
 
 	LOCALBRO="/opt/bro/share/bro/site/local.bro"
@@ -375,7 +376,7 @@ if ! [[ "$ELSASUMMARY" == "Not Configured" ]]; then
                 sed -i 's#.*smtp_server.*#    "smtp_server": "localhost",#g' $ELSAWEB
         else
 		sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
-                sed -i '/.*base_url.*/ a \    "smtp_server": "localhost"' $ELSAWEB
+                sed -i '/.*base_url.*/ a \    "smtp_server": "localhost",' $ELSAWEB
         fi
 	service apache2 restart > /dev/null 2>&1
 fi
