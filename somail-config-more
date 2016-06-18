@@ -282,7 +282,7 @@ echo "# Configuring sostat mail..."
 if ! [[ "$SOSTATSUMMARY" == "Not Configured" ]]; then
 	SOSTAT="/etc/cron.d/sostat"
 	touch $SOSTAT
-	echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL=root@localhost\nHOSTNAME='$HOSTNAME'\n\n01 12 * * * root /usr/bin/sostat 2>&1 | mail -s "$HOSTNAME stats" $EMAIL' > $SOSTAT
+	echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL=root@localhost\nHOSTNAME='$HOSTNAME'\n\n01 12 * * * root /usr/bin/sostat 2>&1 | mail -aFrom:SecurityOnion@$HOSTNAME -s "Statistics for $HOSTNAME" $EMAIL' > $SOSTAT
 fi
 #Configure Bro
 echo "30"
@@ -321,14 +321,13 @@ echo "60"
 echo "# Configuring OSSEC email..."
 if ! [[ "$OSSECSUMMARY" == "Not Configured" ]]; then
 	OSSECCONF="/var/ossec/etc/ossec.conf"
-        if grep -q -i "smtp" $OSSECCONF;then
-		sed -i 's/.*email_notification.*/     <email_notification>yes<\/email_notification>/' $OSSECCONF
+        sed -i 's/.*email_notification.*/     <email_notification>yes<\/email_notification>/' $OSSECCONF
+	if grep -q -i "smtp" $OSSECCONF;then
 		sed -i 's/.*email_to.*/     <email_to>root@localhost<\/email_to>/' $OSSECCONF
                 sed -i 's/.*smtp_server.*/     <smtp_server>localhost<\/smtp_server>/' $OSSECCONF
                 sed -i 's/.*email_from.*/     <email_from>no-reply<\/email_from>/' $OSSECCONF
                 sed -i 's/.*email_maxperhour.*/     <email_maxperhour>20<\/email_maxperhour>/' $OSSECCONF
         else
-                sed -i 's/.*email_notification.*/     <email_notification>yes<\/email_notification>/' $OSSECCONF
                 sed -i '/.*email_notification.*/ a \     <email_to>root@localhost<\/email_to>' $OSSECCONF
                	sed -i '/.*email_to.*/ a \     <smtp_server>localhost<\/smtp_server>' $OSSECCONF
                 sed -i '/.*smtp_server.*/ a \     <email_from>no-reply<\/email_from>' $OSSECCONF
@@ -342,12 +341,11 @@ echo "# Configuring ELSA email..."
 if ! [[ "$ELSASUMMARY" == "Not Configured" ]]; then
 	ELSAWEB="/etc/elsa_web.conf"
 	mysql --defaults-file=/etc/mysql/debian.cnf -Dsecurityonion_db -e "update user_info set email='$ELSAADDRESS' where username='$ELSAUSER';"
-        if grep -q -i "smtp" $ELSAWEB;then
-		sed -i 's#.*display_address.*#    "display_address": "ELSA@'$HOSTNAME'",#g' $ELSAWEB
-		sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
+        sed -i 's#.*display_address.*#    "display_address": "ELSA@'$HOSTNAME'",#g' $ELSAWEB
+	sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
+	if grep -q -i "smtp" $ELSAWEB;then
                 sed -i 's#.*smtp_server.*#    "smtp_server": "localhost",#g' $ELSAWEB
         else
-		sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
                 sed -i '/.*base_url.*/ a \    "smtp_server": "localhost",' $ELSAWEB
         fi
 	service apache2 restart > /dev/null 2>&1
