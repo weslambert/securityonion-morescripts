@@ -3,7 +3,7 @@
 #########################################
 # Variables
 #########################################
-DEBUG="1"
+DEBUG="0"
 HOSTNAME=`hostname`
 IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.0.1" |head -1`
 TITLE="Security Onion Email Setup ($HOSTNAME)"
@@ -343,7 +343,7 @@ if ! [[ "$ELSASUMMARY" == "Not Configured" ]]; then
 	ELSAWEB="/etc/elsa_web.conf"
 	mysql --defaults-file=/etc/mysql/debian.cnf -Dsecurityonion_db -e "update user_info set email='$ELSAADDRESS' where username='$ELSAUSER';"
         if grep -q -i "smtp" $ELSAWEB;then
-		sed -i 's#.*display_address.*#    "display_address": "noreply@'$HOSTNAME'",#g' $ELSAWEB
+		sed -i 's#.*display_address.*#    "display_address": "no-reply@'$HOSTNAME'",#g' $ELSAWEB
 		sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
                 sed -i 's#.*smtp_server.*#    "smtp_server": "localhost",#g' $ELSAWEB
         else
