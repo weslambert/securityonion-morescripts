@@ -9,12 +9,11 @@ IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.
 TITLE="Security Onion Email Setup ($HOSTNAME)"
 if [ -f /etc/postfix/main.cf ];then
 	REMOTE=`grep -o 'relayhost =.*' /etc/postfix/main.cf | cut -f2- -d'='| cut -f2 -d' '`
-	FROMADDR=`grep -o 'myhostname =.*' /etc/postfix/main.cf | cut -f2- -d'=' | cut -f2 -d' '`
 else
 	REMOTE=''
-	FROMADDR="no-reply@"$HOSTNAME
 fi 
 [ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' '`
+FROMADDRESS="no-reply"
 SOSTATSUMMARY="Not Configured"
 BROSUMMARY="Not Configured"
 OSSECSUMMARY="Not Configured"
@@ -42,26 +41,23 @@ if [ $ANSWER -eq 1 ]; then
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Continuing Setup."
 fi
-#########################################
-#'From' Address
-#########################################
-FROM_CONFIRMED="no"
-while [ $FROM_CONFIRMED = "no" ]; do
-	TEXT="What would you like to specify for the system's 'From' address?"
-	FROMADDRESS=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$FROMADDR"`
-	ANSWER="$?"
-	if [ $ANSWER -eq 1 ]; then
-        	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Exiting Setup"
-        	exit 1
-	else
-		if [ -z $FROMADDRESS ]; then 
-			zenity --error --title "$TITLE" --text="Please provide a valid response\!"
-		else
-			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring 'FROM' address."
-			FROM_CONFIRMED="yes"
-		fi
-	fi
-done
+TEXT="Which type of deployment are you currently running?"
+COMPONENTS=`zenity --height=300 --list --radiolist --column="1" --column="2" --hide-header --title="$TITLE" --text="$TEXT" TRUE Server FALSE Sensor FALSE Standalone`
+
+case $COMPONENTS in
+        Standalone)
+                SERVER="1"
+                SENSOR="1"
+                ;;
+        Server)
+                SERVER="1"
+                ;;
+        Sensor)
+                SENSOR="1"
+                ;;
+        *)
+                ;;
+esac
 #########################################
 # Notification Address
 #########################################
@@ -118,23 +114,6 @@ else
 	SOSTATADDRESS="root@localhost"
 	SOSTATSUMMARY="Configured"
 fi
-TEXT="Which type of deployment are you currently running?"
-COMPONENTS=`zenity --height=300 --list --radiolist --column="1" --column="2" --hide-header --title="$TITLE" --text="$TEXT" TRUE Server FALSE Sensor FALSE Standalone`
-
-case $COMPONENTS in
-        Standalone)
-		SERVER="1"
-		SENSOR="1"
-		;;
-	Server)
-		SERVER="1"
-		;;
-	Sensor)
-		SENSOR="1"
-		;;
-	*)
-		;;
-esac	
 #########################################
 # Bro email
 #########################################
@@ -146,7 +125,6 @@ if [[ $SENSOR -eq 1 ]];then
 	ANSWER="$?"
 	if [ $ANSWER -eq 1 ]; then
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Not configuring email for Bro."
-		BROSUMMARY="Not Configured"
 	else
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for Bro."
 		BROADDRESS="root@localhost"
@@ -239,15 +217,11 @@ if [[ $SERVER -eq 1 ]];then
 		done
 	fi
 fi
-#if [[ $ELSASUMMARY == "Not Configured" ]]; then
-#	ELSAUSER="Not Configured"
-#	ELSASERVER="Not Configured"
-#fi
 #########################################
 # Summary
 #########################################
 TEXT="The following will be configured for $HOSTNAME:\n\
-\n\<b>'From' address</b>: $FROMADDRESS\n\
+\n\
 <b>Notification address</b>: $NOTIFYADDRESS\n\
 <b>Mail server</b>: $MAILSERVER\n\
 <b>Daily sostat email</b>:$SOSTATSUMMARY\n\
@@ -294,7 +268,6 @@ fi
 newaliases > /dev/null 2>&1
 #Configure system from address
 POSTFIX="/etc/postfix/main.cf"
-sed -i "s|^myhostname = .*$|myhostname = $FROMADDRESS|g" $POSTFIX
 #Configure system mail server
 sed -i "s|^relayhost = .*$|relayhost = $MAILSERVER|g" $POSTFIX
 service postfix restart > /dev/null 2>&1
@@ -312,18 +285,11 @@ echo "# Configuring Bro email..."
 if ! [[ "$BROSUMMARY" == "Not Configured" ]]; then
 	BROCTL="/opt/bro/etc/broctl.cfg"
 	sed -i "s|^MailTo.*$|MailTo = $BROADDRESS|g" $BROCTL
-        if  grep -q "sendmail" $BROCTL;then
-        	sed -i "s|^sendmail.*$|sendmail = /usr/sbin/sendmail|g" $BROCTL
-                if grep -q "tracesummary=" $BROCTL;then
-                	sed -i "s|^tracesummary=.*$|tracesummary=|g" $BROCTL
-		else
-			sed -i '/sendmail/a tracesummary=' $BROCTL
-                fi
-        else
-        	sed -i '/MailTo/a\\sendmail = /usr/sbin/sendmail' $BROCTL
-		sed -i '/sendmail/a tracesummary=' $BROCTL
+        if grep -q "tracesummary=" $BROCTL;then
+        	sed -i "s|^tracesummary=.*$|tracesummary=|g" $BROCTL
+	else
+		sed -i '/MailTo/a tracesummary=' $BROCTL
         fi
-
 	LOCALBRO="/opt/bro/share/bro/site/local.bro"
         if grep -q -i "email" $LOCALBRO;then
         	:
@@ -341,9 +307,10 @@ if ! [[ "$SGUILSUMMARY" == "Not Configured" ]]; then
 	sed -i "s|^set EMAIL_EVENTS.*$|set EMAIL_EVENTS 1|g" $SGUILDEMAIL
         sed -i "s|^set SMTP.*$|set SMTP_SERVER localhost|g" $SGUILDEMAIL
         sed -i "s|^set EMAIL_RCPT.*$|set EMAIL_RCPT_TO \"root@localhost\"|g" $SGUILDEMAIL
-        sed -i "s|^set EMAIL_FROM.*$|set EMAIL_FROM \"$FROMADDRESS\"|g" $SGUILDEMAIL
+        sed -i "s|^set EMAIL_FROM.*$|set EMAIL_FROM \"no-reply\"|g" $SGUILDEMAIL
 	nsm_server_ps-restart > /dev/null
 fi
+echo $FROMADDRESS
 #Configure OSSEC
 echo "60"
 echo "# Configuring OSSEC email..."
@@ -353,13 +320,13 @@ if ! [[ "$OSSECSUMMARY" == "Not Configured" ]]; then
 		sed -i 's/.*email_notification.*/     <email_notification>yes<\/email_notification>/' $OSSECCONF
 		sed -i 's/.*email_to.*/     <email_to>root@localhost<\/email_to>/' $OSSECCONF
                 sed -i 's/.*smtp_server.*/     <smtp_server>localhost<\/smtp_server>/' $OSSECCONF
-                sed -i 's/.*email_from.*/     <email_from>\'$HOSTNAME'\<\/email_from>/' $OSSECCONF
+                sed -i 's/.*email_from.*/     <email_from>no-reply<\/email_from>/' $OSSECCONF
                 sed -i 's/.*email_maxperhour.*/     <email_maxperhour>20<\/email_maxperhour>/' $OSSECCONF
         else
                 sed -i 's/.*email_notification.*/     <email_notification>yes<\/email_notification>/' $OSSECCONF
                 sed -i '/.*email_notification.*/ a \     <email_to>root@localhost<\/email_to>' $OSSECCONF
                	sed -i '/.*email_to.*/ a \     <smtp_server>localhost<\/smtp_server>' $OSSECCONF
-                sed -i '/.*smtp_server.*/ a \     <email_from>\ossec@'$HOSTNAME'\<\/email_from>' $OSSECCONF
+                sed -i '/.*smtp_server.*/ a \     <email_from>no-reply<\/email_from>' $OSSECCONF
                 sed -i '/.*email_from.*/ a \     <email_maxperhour>\100\<\/email_maxperhour>' $OSSECCONF
         fi
 	service ossec-hids-server restart > /dev/null
