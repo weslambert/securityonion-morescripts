@@ -312,7 +312,7 @@ if ! [[ "$SGUILSUMMARY" == "Not Configured" ]]; then
 	sed -i "s|^set EMAIL_EVENTS.*$|set EMAIL_EVENTS 1|g" $SGUILDEMAIL
         sed -i "s|^set SMTP.*$|set SMTP_SERVER localhost|g" $SGUILDEMAIL
         sed -i "s|^set EMAIL_RCPT.*$|set EMAIL_RCPT_TO \"root@localhost\"|g" $SGUILDEMAIL
-        sed -i "s|^set EMAIL_FROM.*$|set EMAIL_FROM \"no-reply\"|g" $SGUILDEMAIL
+        sed -i "s|^set EMAIL_FROM.*$|set EMAIL_FROM \"Sguil\"|g" $SGUILDEMAIL
 	nsm_server_ps-restart > /dev/null
 fi
 echo $FROMADDRESS
@@ -343,7 +343,7 @@ if ! [[ "$ELSASUMMARY" == "Not Configured" ]]; then
 	ELSAWEB="/etc/elsa_web.conf"
 	mysql --defaults-file=/etc/mysql/debian.cnf -Dsecurityonion_db -e "update user_info set email='$ELSAADDRESS' where username='$ELSAUSER';"
         if grep -q -i "smtp" $ELSAWEB;then
-		sed -i 's#.*display_address.*#    "display_address": "no-reply@'$HOSTNAME'",#g' $ELSAWEB
+		sed -i 's#.*display_address.*#    "display_address": "ELSA@'$HOSTNAME'",#g' $ELSAWEB
 		sed -i 's#.*base_url.*#    "base_url": "https://'$ELSASERVER'/elsa-query",#g' $ELSAWEB
                 sed -i 's#.*smtp_server.*#    "smtp_server": "localhost",#g' $ELSAWEB
         else
