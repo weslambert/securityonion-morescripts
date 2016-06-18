@@ -3,7 +3,7 @@
 #########################################
 # Variables
 #########################################
-DEBUG="0"
+DEBUG="1"
 HOSTNAME=`hostname`
 IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.0.1" |head -1`
 TITLE="Security Onion Email Setup ($HOSTNAME)"
@@ -36,27 +36,32 @@ NO="No, Quit."
 zenity --question --title="$TITLE" --text="$TEXT" --ok-label="$YES" --cancel-label="$NO" --no-wrap
 ANSWER="$?"
 if [ $ANSWER -eq 1 ]; then
-        [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Exiting Setup"
+	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Exiting Setup"
         exit 1
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Continuing Setup."
 fi
-TEXT="Which type of deployment are you currently running?"
+TEXT="What type of deployment are you currently running?"
 COMPONENTS=`zenity --height=300 --list --radiolist --column="1" --column="2" --hide-header --title="$TITLE" --text="$TEXT" TRUE Server FALSE Sensor FALSE Standalone`
 
 case $COMPONENTS in
         Standalone)
                 SERVER="1"
                 SENSOR="1"
+		[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Selected Standalone."
                 ;;
         Server)
                 SERVER="1"
-                ;;
+                [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Selected Server."
+		;;
         Sensor)
                 SENSOR="1"
-                ;;
+                [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Selected Sensor."
+		;;
         *)
-                ;;
+		[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
+                exit 1
+		;;
 esac
 #########################################
 # Notification Address
@@ -210,7 +215,7 @@ if [[ $SERVER -eq 1 ]];then
 				if [ -z $ELSASERVER ]; then 
                         		zenity --error --title "$TITLE" --text="Please provide a valid response\!"
                 		else
-                        		[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring ELSA server to alert upon."
+                        		[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring ELSA server."
 					ELSASERVER_CONFIRMED="yes"
                 		fi
 			fi
