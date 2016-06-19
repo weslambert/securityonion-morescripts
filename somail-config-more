@@ -9,19 +9,23 @@ HOSTNAME=`hostname`
 IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.0.1" |head -1`
 TITLE="Security Onion Email Setup ($HOSTNAME)"
 if [ -f /etc/postfix/main.cf ];then
-	REMOTE=`grep -o 'relayhost =.*' /etc/postfix/main.cf | cut -f2- -d'='| cut -f2 -d' '`
+	SMTP=`grep -o 'relayhost =.*' /etc/postfix/main.cf | cut -f2- -d'='| cut -f2 -d' '`
 else
-	REMOTE=''
+	SMTP=''
 fi 
 [ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' '`
 FROMADDRESS="no-reply"
-SOSTATSUMMARY="Not Configured"
-BROSUMMARY="Not Configured"
-OSSECSUMMARY="Not Configured"
-SGUILSUMMARY="Not Configured"
-ELSASUMMARY="Not Configured"
-ELSAUSER="Not Configured"
-ELSASERVER="Not Configured"
+SOSTATEMAIL="NO"
+SOSTATEMAIL_SUMMARY=" - Daily sostat email will not be configured."
+BROEMAIL="NO"
+BROEMAIL_SUMMARY=" - Bro email will not be configured."
+OSSECEMAIL="NO"
+OSSECEMAIL_SUMMARY=" - OSSEC email will not be configured"
+SGUILEMAIL="NO"
+SGUILEMAIL_SUMMARY=" - Sguil email will not be configured."
+ELSAEMAIL="NO"
+ELSAEMAIL_SUMMARY=" - ELSA email will not be configured."
+
 #########################################
 # Got r00t?
 #########################################
@@ -39,7 +43,7 @@ TEXT="<b>Welcome to Security Onion Email Setup!</b>\n\
 \n\
 This program will allow you to configure email for Security Onion on $HOSTNAME.\n\
 \n\
-Please note, this script will install mailutils if it is not already installed.
+Please note, this script will install mailutils and Postfix if they are not already installed.
 \n\
 Would you like to continue?"
 YES="Yes, Continue!"
@@ -91,6 +95,7 @@ while [ $NOTIFY_CONFIRMED = "no" ]; do
                 else
                         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring notification address."
 			NOTIFY_CONFIRMED="yes"
+			NOTIFY_SUMMARY=" - Notification address will be set to: $NOTIFYADDRESS"
                 fi
 	fi
 done
@@ -100,7 +105,7 @@ done
 MAILSERVER_CONFIRMED="no"
 while [ $MAILSERVER_CONFIRMED = "no" ]; do
 	TEXT="What address would you like to specify for the mail (SMTP) server?"
-	MAILSERVER=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$REMOTE"`
+	MAILSERVER=`zenity --title="$TITLE" --text="$TEXT" --entry --entry-text="$SMTP"`
 	ANSWER="$?"
 	if [ $ANSWER -eq 1 ]; then
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Exiting Setup"
@@ -111,6 +116,7 @@ while [ $MAILSERVER_CONFIRMED = "no" ]; do
                 else
                         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring SMTP server."
 			MAILSERVER_CONFIRMED="yes"
+			MAILSERVER_SUMMARY=" - Mail (SMTP) server set to: $MAILSERVER"
                 fi
 	fi
 done
@@ -126,9 +132,9 @@ if [ $ANSWER -eq 1 ]; then
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Not configuring email for sostat output."
 else
         [  $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring sostat email."
-	SOSTAT_CONFIRMED="yes"
 	SOSTATADDRESS="root@localhost"
-	SOSTATSUMMARY="Configured"
+	SOSTATEMAIL="YES"
+	SOSTATEMAIL_SUMMARY=" - Daily sostat email will be configured."
 fi
 #########################################
 # Bro email
@@ -144,7 +150,8 @@ if [[ $SENSOR -eq 1 ]];then
 	else
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for Bro."
 		BROADDRESS="root@localhost"
-		BROSUMMARY="Configured"
+		BROEMAIL="YES"
+		BROEMAIL_SUMMARY=" - Bro email will be configured."
 	fi
 fi
 #########################################
@@ -161,7 +168,8 @@ if [[ $SERVER -eq 1 ]];then
 	else
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for Sguil."
 		SGUILADDRESS="root@localhost"
-		SGUILSUMMARY="Configured"
+		SGUILEMAIL="Configured"
+		SGUILEMAIL_SUMMARY=" - Sguil email will be configured."
 	fi
 fi
 #########################################
@@ -177,7 +185,8 @@ if [ $ANSWER -eq 1 ]; then
 else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for OSSEC."
 	OSSECADDRESS="root@localhost"
-	OSSECSUMMARY="Configured"
+	OSSECEMAIL="YES"
+	OSSECEMAIL_SUMMARY=" - OSSEC email will be configured."
 fi
 #########################################
 #ELSA email
@@ -193,7 +202,7 @@ if [[ $SERVER -eq 1 ]];then
 	else
         	[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring email for ELSA."
 		ELSAADDRESS="root@localhost"
-		ELSASUMMARY="Configured"
+		ELSAEMAIL="YES"
         	ELSA_USER_CONFIRMED="no"
 		while [ $ELSA_USER_CONFIRMED = "no" ]; do	
 			TEXT="What is the ELSA username to which this email address is associated?"
@@ -210,7 +219,7 @@ if [[ $SERVER -eq 1 ]];then
 					ELSA_USER_CONFIRMED="yes"
                 		fi
 			fi
-        	done
+		done
 		#########################################
 		# ELSA server IP/Hostname
         	#########################################
@@ -231,6 +240,7 @@ if [[ $SERVER -eq 1 ]];then
                 		fi
 			fi
 		done
+	ELSAEMAIL_SUMMARY=" - ELSA email will be configured.\n\   - ELSA User: $ELSAUSER\n\   - ELSA Server: $ELSASERVER"
 	fi
 fi
 #########################################
@@ -238,16 +248,14 @@ fi
 #########################################
 TEXT="The following will be configured for $HOSTNAME:\n\
 \n\
-<b>Notification address</b>: $NOTIFYADDRESS\n\
-<b>Mail server</b>: $MAILSERVER\n\
-<b>Daily sostat email</b>:$SOSTATSUMMARY\n\
-<b>Bro email</b>:$BROSUMMARY\n\
-<b>Sguil email</b>:$SGUILSUMMARY\n\
-<b>OSSEC email</b>:$OSSECSUMMARY\n\
-<b>ELSA email</b>:$ELSASUMMARY\n\
-<b>ELSA username</b>: $ELSAUSER\n\
-<b>ELSA server</b>: $ELSASERVER\n\
-\n\Please note, services will restart upon confirmation."
+$NOTIFY_SUMMARY\n\
+$MAILSERVER_SUMMARY\n\
+$SOSTATEMAIL_SUMMARY\n\
+$BROEMAIL_SUMMARY\n\
+$SGUILEMAIL_SUMMARY\n\
+$OSSECEMAIL_SUMMARY\n\
+$ELSAEMAIL_SUMMARY\n\\n\
+Please note, services will restart upon confirmation."
 
 YES="Yes, Continue!"
 NO="No, Quit."
@@ -260,6 +268,7 @@ else
         [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuration confirmed."
 fi
 }
+
 function MOVELOG() {
 # Move log file from /tmp/ to /var/log/nsm/
 mv $LOG /var/log/nsm/so-email-setup.log
@@ -277,7 +286,11 @@ if dpkg -l | grep -q -i "mailutils"; then
 else
 	apt-get install -y mailutils > $LOG 2>&1
 fi
-
+if dpkg -l | grep -q -i "postfix"; then
+	:
+else
+	apt-get install -y postfix > $LOG 2>&1
+fi
 echo "10"
 echo "# Configuring system mail..."
 #Configure system 'notification' address
@@ -297,7 +310,7 @@ service postfix restart > $LOG 2>&1
 #Configure sostat
 echo "15"
 echo "# Configuring sostat mail..."
-if ! [[ "$SOSTATSUMMARY" == "Not Configured" ]]; then
+if ! [[ "$SOSTATEMAIL" == "NO" ]]; then
 	SOSTAT="/etc/cron.d/sostat"
 	touch $SOSTAT
 	echo -e '#/etc/cron.d/sostat\n#\n#crontab entry to run sostat and email its output\n\n\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\nEMAIL=root@localhost\nHOSTNAME='$HOSTNAME'\n\n01 12 * * * root /usr/bin/sostat 2>&1 | mail -aFrom:SecurityOnion@$HOSTNAME -s "Statistics for $HOSTNAME" $EMAIL' > $SOSTAT
@@ -305,7 +318,7 @@ fi
 #Configure Bro
 echo "30"
 echo "# Configuring Bro email..."
-if ! [[ "$BROSUMMARY" == "Not Configured" ]]; then
+if ! [[ "$BROEMAIL" == "NO" ]]; then
 	BROCTL="/opt/bro/etc/broctl.cfg"
 	sed -i "s|^MailTo.*$|MailTo = root@localhost|g" $BROCTL
         if grep -q "tracesummary=" $BROCTL;then
@@ -324,7 +337,7 @@ fi
 #Configure Sguil
 echo "45"
 echo "# Configuring Sguil email..."
-if ! [[ "$SGUILSUMMARY" == "Not Configured" ]]; then
+if ! [[ "$SGUILEMAIL" == "NO" ]]; then
 
 	SGUILDEMAIL="/etc/nsm/securityonion/sguild.email"
 	sed -i "s|^set EMAIL_EVENTS.*$|set EMAIL_EVENTS 1|g" $SGUILDEMAIL
@@ -336,7 +349,7 @@ fi
 #Configure OSSEC
 echo "60"
 echo "# Configuring OSSEC email..."
-if ! [[ "$OSSECSUMMARY" == "Not Configured" ]]; then
+if ! [[ "$OSSECEMAIL" == "NO" ]]; then
 	OSSECCONF="/var/ossec/etc/ossec.conf"
         sed -i 's/.*email_notification.*/     <email_notification>yes<\/email_notification>/' $OSSECCONF
 	if grep -q -i "smtp" $OSSECCONF;then
@@ -355,7 +368,7 @@ fi
 #Configure ELSA
 echo "75"
 echo "# Configuring ELSA email..."
-if ! [[ "$ELSASUMMARY" == "Not Configured" ]]; then
+if ! [[ "$ELSAEMAIL" == "NO" ]]; then
 	ELSAWEB="/etc/elsa_web.conf"
 	mysql --defaults-file=/etc/mysql/debian.cnf -Dsecurityonion_db -e "update user_info set email='$ELSAADDRESS' where username='$ELSAUSER';"
         sed -i 's#.*display_address.*#    "display_address": "ELSA@'$HOSTNAME'",#g' $ELSAWEB
@@ -438,13 +451,14 @@ else
         echo
         echo "Ready to configure system using parameters in $ANSWERFILE."
         echo
-        echo "WARNING! Continuing will destroy any existing data/config."
+        echo "WARNING! Continuing will destroy any existing email configuration."
         echo "Are you sure you want to continue?"
         echo "Type yes to continue or anything else to exit."
         read INPUT
         [ "$INPUT" != "yes" ] && exit 0
         echo
 fi
+
 if [ "$OUTPUT" = "gui" ]; then
 	CONFIGURE_EMAIL |
 	zenity --progress --title="$TITLE" --text="Please wait while making changes to the system..." --percentage=0 --auto-close
@@ -452,6 +466,7 @@ else
         echo "Please wait while..."
         CONFIGURE_EMAIL | grep --line-buffered "^#" | sed 's|# Please wait while||g'
 fi
+
 MOVELOG
 ########################################
 # Setup Complete
@@ -460,10 +475,10 @@ TEXT="Security Onion Email Setup is now complete! \n \
 \n\
 If you would like to edit the email configuration manually, please refer to:\n
 https://github.com/Security-Onion-Solutions/security-onion/wiki/Email\n"
-        if [ "$OUTPUT" = "gui" ]; then
-		zenity --info --title="$TITLE" --text="$TEXT" --no-wrap
-        else
-                echo
-                echo "$TEXT" | sed 's|\\n|\n|g' | sed 's|\\||g'
-                echo
-        fi
+if [ "$OUTPUT" = "gui" ]; then
+	zenity --info --title="$TITLE" --text="$TEXT" --no-wrap
+else
+	echo
+	echo "$TEXT" | sed 's|\\n|\n|g' | sed 's|\\||g'
+	echo
+fi
