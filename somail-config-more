@@ -18,7 +18,7 @@ FROMADDRESS="no-reply"
 SOSTATEMAIL="NO"
 #Default sostat confirmation verbiage
 SOSTATEMAIL_SUMMARY=" - Daily sostat email will not be configured."
-#Bro enabled
+#Bro email enabled - YES/NO
 BROEMAIL="NO"
 #Default Bro confirmation verbiage
 BROEMAIL_SUMMARY=" - Bro email will not be configured."
@@ -34,7 +34,7 @@ SGUILEMAIL_SUMMARY=" - Sguil email will not be configured."
 ELSAEMAIL="NO"
 #Default ELSA confirmation verbiage
 ELSAEMAIL_SUMMARY=" - ELSA email will not be configured."
-#Get notfiication address from /etc/aliases if it already exists
+#Get notification address from /etc/aliases if it already exists
 [ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' '`
 #Get SMTP server from main.cf if it already exists
 if [ -f /etc/postfix/main.cf ];then
