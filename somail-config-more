@@ -8,12 +8,6 @@ LOG=`mktemp /tmp/so-email-setup.log.XXXXXXXXXX`
 HOSTNAME=`hostname`
 IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.0.1" |head -1`
 TITLE="Security Onion Email Setup ($HOSTNAME)"
-if [ -f /etc/postfix/main.cf ];then
-	SMTP=`grep -o 'relayhost =.*' /etc/postfix/main.cf | cut -f2- -d'='| cut -f2 -d' '`
-else
-	SMTP=''
-fi 
-[ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' '`
 FROMADDRESS="no-reply"
 SOSTATEMAIL="NO"
 SOSTATEMAIL_SUMMARY=" - Daily sostat email will not be configured."
@@ -25,7 +19,12 @@ SGUILEMAIL="NO"
 SGUILEMAIL_SUMMARY=" - Sguil email will not be configured."
 ELSAEMAIL="NO"
 ELSAEMAIL_SUMMARY=" - ELSA email will not be configured."
-
+[ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' '`
+if [ -f /etc/postfix/main.cf ];then
+	SMTP=`grep -o 'relayhost =.*' /etc/postfix/main.cf | cut -f2- -d'='| cut -f2 -d' '`
+else
+	SMTP=''
+fi 
 #########################################
 # Got r00t?
 #########################################
