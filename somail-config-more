@@ -1,42 +1,45 @@
 #!/bin/bash
 #
+# Description: 
+# Configure Security Onion email
+#
 #########################################
 # Variables
 #########################################
 DEBUG="0"
-#Create temp log
+# Create temp log
 LOG=`mktemp /tmp/so-email-setup.log.XXXXXXXXXX`
-#Get hostname
+# Get hostname
 HOSTNAME=`hostname`
-#Get IP address of machine 
+# Get IP address of machine 
 IP=`ifconfig |grep "inet addr" | awk '{print $2}' |cut -d\: -f2 |grep -v "127.0.0.1" |head -1`
-#Set title for Zenity dialog(s)
+# Set title for Zenity dialog(s)
 TITLE="Security Onion Email Setup ($HOSTNAME)"
-#Set 'from' address for mail
+# Set 'from' address for mail
 FROMADDRESS="no-reply"
-#Daily sostat mail enabled - YES/NO
+# Daily sostat mail enabled - YES/NO
 SOSTATEMAIL="NO"
-#Default sostat confirmation verbiage
+# Default sostat confirmation verbiage
 SOSTATEMAIL_SUMMARY=" - Daily sostat email will not be configured."
-#Bro email enabled - YES/NO
+# Bro email enabled - YES/NO
 BROEMAIL="NO"
-#Default Bro confirmation verbiage
+# Default Bro confirmation verbiage
 BROEMAIL_SUMMARY=" - Bro email will not be configured."
-#OSSEC email enabled - YES/NO
+# OSSEC email enabled - YES/NO
 OSSECEMAIL="NO"
-#Default OSSEC confirmation verbiage
+# Default OSSEC confirmation verbiage
 OSSECEMAIL_SUMMARY=" - OSSEC email will not be configured"
-#Sguil email enabled - YES/NO
+# Sguil email enabled - YES/NO
 SGUILEMAIL="NO"
-#Default Sguil confirmation verbiage
+# Default Sguil confirmation verbiage
 SGUILEMAIL_SUMMARY=" - Sguil email will not be configured."
-#ELSA email enabled - YES/NO
+# ELSA email enabled - YES/NO
 ELSAEMAIL="NO"
-#Default ELSA confirmation verbiage
+# Default ELSA confirmation verbiage
 ELSAEMAIL_SUMMARY=" - ELSA email will not be configured."
-#Get notification address from /etc/aliases if it already exists
+# Get notification address from /etc/aliases if it already exists
 [ -f /etc/aliases ] && ADMINADDR=`grep -o 'root:.*' /etc/aliases | cut -f2- -d' '`
-#Get SMTP server from main.cf if it already exists
+# Get SMTP server from main.cf if it already exists
 if [ -f /etc/postfix/main.cf ];then
 	SMTP=`grep -o 'relayhost =.*' /etc/postfix/main.cf | cut -f2- -d'='| cut -f2 -d' '`
 else
