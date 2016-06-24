@@ -46,7 +46,9 @@ NUM_INTERFACES=`echo $INTERFACES | wc -w`
 SNIFF_INTERFACES=`awk '/manual/ {print $2}' /etc/network/interfaces | wc -l`
 [ $SNIFF_INTERFACES -eq 0 ] && SNIFF_INTERFACES=1
 MTU=`cat "/etc/network/interfaces" | egrep "mtu" | awk '{print $2;exit}'`
-MTU_FIN=`echo $(($MTU+16))`
+if [ $MTU == "1502" ]; then
+        MTU="1518"
+fi
 SENSORTAB="/etc/nsm/sensortab"
 UPDATE_ELSA_SERVER="NO"
 # PCAP_OPTIONS are passed to netsniff-ng
@@ -393,7 +395,29 @@ Please provide a username that can SSH to the master server and execute sudo."
                 exit
                 ;;
         esac
-
+	# Ask if user would like to configure a custom HOME_NET
+	#if [ $SENSOR = 1 ]; then
+	#	TEXT="Would you like to specify a custom HOME__NET?\n\\n\Snort/Suricata uses the HOME_NET variable to determine (local network) IP addresses to protect.\n\n\The default HOME__NET is configured as the following (RFC 1918):\n\\n\ 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+	#	YES="Yes, configure a custom HOME__NET."
+	#	NO="No, use the default HOME__NET."
+	#	zenity --question --title="$TITLE" --text="$TEXT" --ok-label="$YES" --cancel-label="$NO" --no-wrap
+	#	ANSWER="$?"
+	#	if [ $ANSWER -eq 1 ]; then
+	#		[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Configuring default RFC 1918 HOME__NET."
+	#		HOME_NET="192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+	#	else
+	#		[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring custom HOME__NET."
+	#		TEXT="What would you like to configure HOME__NET as?\n\n\Add a comma (no space) after each address range.\n\n\Ex. 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+	#		HOME_NET=`zenity --title="$TITLE" --text="$TEXT" --entry`
+	#		ANSWER="$?"
+	#		if [ $ANSWER -eq 1 ]; then
+	#			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
+	#			exit
+	#		else
+	#			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring HOME__NET as $HOME_NET."
+	#		fi
+	#	fi
+	#fi
 	TEXT="Best Practices or Custom?\n\
 \n\
 If you'd like to use the Best Practices defaults, please select Best Practices.\n\
@@ -587,6 +611,29 @@ if [ $ADVANCED_SETUP -eq 1 ] && [ $SERVER -eq 1 ]; then
 		;;
 	esac
 	# End of ADVANCED SETUP - SERVER
+	if [ $SENSOR = 1 ]; then
+                TEXT="Would you like to specify a custom HOME__NET?\n\\n\Snort/Suricata uses the HOME_NET variable to determine (local network) IP addresses to protect.\n\n\The default HOME__NET is configured as the following (RFC 1918):\n\\n\ 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+                YES="Yes, configure a custom HOME__NET."
+                NO="No, use the default HOME__NET."
+                zenity --question --title="$TITLE" --text="$TEXT" --ok-label="$YES" --cancel-label="$NO" --no-wrap
+                ANSWER="$?"
+                if [ $ANSWER -eq 1 ]; then
+                        [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked No.  Configuring default RFC 1918 HOME__NET."
+                        HOME_NET="192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+                else
+                        [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Configuring custom HOME__NET."
+                        TEXT="What would you like to configure HOME__NET as?\n\n\Add a comma (no space) after each address range.\n\n\Ex. 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12"
+                        HOME_NET=`zenity --title="$TITLE" --text="$TEXT" --entry`
+                        ANSWER="$?"
+                        if [ $ANSWER -eq 1 ]; then
+                                [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Cancel.  Exiting Setup."
+                                exit
+                        else
+                                [ $DEBUG -eq 1 ] && echo "DEBUG: Clicked OK.  Configuring HOME__NET as $HOME_NET."
+                        fi
+                fi
+        fi
+
 fi
 
 #########################################
@@ -666,7 +713,7 @@ Would you like to enable the IDS Engine?"
 			[ $DEBUG -eq 1 ] && echo "DEBUG: Clicked Yes.  Enabling IDS Engine."
 		fi
 	fi
-
+	
 	# IDS Engine Procs
         if [ "$IDS_ENGINE_ENABLED" == "yes" ] && [ "$CALCD_CORES" -gt 1 ] && [ "$CUSTOM" -eq 1 ]; then
                 TEXT="How many IDS engine processes would you like to run?\n\
@@ -1317,7 +1364,7 @@ for INTERFACE in $ALL_INTERFACES; do
         cp /etc/nsm/templates/snort/snort.conf /etc/nsm/"$SENSORNAME"/ >> $LOG 2>&1
         cp /etc/nsm/templates/snort/unicode.map /etc/nsm/"$SENSORNAME"/ >> $LOG 2>&1
         cp /etc/nsm/templates/suricata/suricata.yaml.in /etc/nsm/"$SENSORNAME"/suricata.yaml >> $LOG 2>&1
-	sed -i "s|# config snaplen:|config snaplen: $MTU_FIN|g" /etc/nsm/"$SENSORNAME"/snort.conf
+	sed -i "s|^ipvar HOME_NET.*|ipvar HOME_NET \[$HOME_NET\]|g" /etc/nsm/"$SENSORNAME"/snort.conf
 	sed -i "s|classification-file: /etc/suricata/classification.config|classification-file: /etc/nsm/$SENSORNAME/classification.config|g" /etc/nsm/"$SENSORNAME"/suricata.yaml
 	sed -i "s|reference-config-file: /etc/suricata/reference.config|reference-config-file: /etc/nsm/$SENSORNAME/reference.config|g" /etc/nsm/"$SENSORNAME"/suricata.yaml
 	sed -i "s|# threshold-file: /etc/suricata/threshold.config|threshold-file: /etc/nsm/$SENSORNAME/threshold.conf|g" /etc/nsm/"$SENSORNAME"/suricata.yaml
@@ -1325,6 +1372,7 @@ for INTERFACE in $ALL_INTERFACES; do
 	#sed -i "s|threads: 1|threads: $IDS_LB_PROCS|g" /etc/nsm/"$SENSORNAME"/suricata.yaml
 	sed -i "s|interface: eth0|interface: $INTERFACE|g" /etc/nsm/"$SENSORNAME"/suricata.yaml
 	sed -i "s|cluster-id: 99|cluster-id: $BY2PORT|g" /etc/nsm/"$SENSORNAME"/suricata.yaml
+	sed -i "s|HOME_NET:.*|HOME_NET: \"[$HOME_NET]\"|g" /etc/nsm/"$SENSORNAME"/suricata.yaml
 	mkdir -p /usr/local/lib/snort_dynamicrules
 
 	# /etc/nsm/rules/
